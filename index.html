@@ -1,0 +1,234 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>我的个人网站</title>
+    <link rel="stylesheet" href="styles.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <!-- Three.js库 -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+</head>
+<body>
+    <!-- Three.js背景画布 -->
+    <div id="bg-canvas"></div>
+    
+    <!-- 导航栏 -->
+    <nav class="navbar">
+        <div class="logo">
+            <h1>我的个人空间</h1>
+        </div>
+        <div class="nav-links">
+            <ul>
+                <li><a href="#home">首页</a></li>
+                <li><a href="#about">关于我</a></li>
+                <li><a href="#portfolio">作品集</a></li>
+                <li><a href="#contact">联系方式</a></li>
+            </ul>
+        </div>
+        <div class="burger">
+            <div class="line1"></div>
+            <div class="line2"></div>
+            <div class="line3"></div>
+        </div>
+    </nav>
+
+    <!-- 英雄区/首屏 -->
+    <section id="home" class="hero">
+        <div class="hero-content">
+            <h1>创意 · 设计 · 开发</h1>
+            <p>欢迎来到我的个人网站</p>
+            <a href="#about" class="btn">了解更多</a>
+        </div>
+        <div class="scroll-down">
+            <a href="#carousel"><i class="fas fa-chevron-down"></i></a>
+        </div>
+    </section>
+
+    <!-- 轮播图区域 -->
+    <section id="carousel" class="carousel-section">
+        <h2>我的作品展示</h2>
+        <div class="carousel-container">
+            <div class="carousel">
+                <div class="carousel-item active">
+                    <img src="https://via.placeholder.com/1200x600/3498db/ffffff?text=项目一" alt="项目一">
+                    <div class="carousel-caption">
+                        <h3>项目一</h3>
+                        <p>这是我完成的第一个项目，主要使用HTML和CSS实现</p>
+                    </div>
+                </div>
+                <div class="carousel-item">
+                    <img src="https://via.placeholder.com/1200x600/2ecc71/ffffff?text=项目二" alt="项目二">
+                    <div class="carousel-caption">
+                        <h3>项目二</h3>
+                        <p>这个项目展示了我的JavaScript技能</p>
+                    </div>
+                </div>
+                <div class="carousel-item">
+                    <img src="https://via.placeholder.com/1200x600/e74c3c/ffffff?text=项目三" alt="项目三">
+                    <div class="carousel-caption">
+                        <h3>项目三</h3>
+                        <p>一个响应式设计的网站示例</p>
+                    </div>
+                </div>
+            </div>
+            <div class="carousel-controls">
+                <button class="prev"><i class="fas fa-chevron-left"></i></button>
+                <div class="carousel-indicators">
+                    <span class="indicator active"></span>
+                    <span class="indicator"></span>
+                    <span class="indicator"></span>
+                </div>
+                <button class="next"><i class="fas fa-chevron-right"></i></button>
+            </div>
+        </div>
+    </section>
+
+    <!-- 关于我区域 -->
+    <section id="about" class="about-section">
+        <div class="about-container">
+            <div class="about-image">
+                <img src="https://via.placeholder.com/400x400/34495e/ffffff?text=头像" alt="我的照片">
+            </div>
+            <div class="about-content">
+                <h2>关于我</h2>
+                <p>你好！我是一名热爱创造的开发者。我擅长前端开发，对设计也有浓厚的兴趣。我相信技术与艺术的结合可以创造出令人惊叹的作品。</p>
+                <p>在过去的几年里，我参与了多个项目的开发，积累了丰富的经验。我喜欢学习新技术，不断挑战自己。</p>
+                <div class="skills">
+                    <div class="skill">
+                        <span>HTML/CSS</span>
+                        <div class="skill-bar">
+                            <div class="skill-progress" style="width: 90%"></div>
+                        </div>
+                    </div>
+                    <div class="skill">
+                        <span>JavaScript</span>
+                        <div class="skill-bar">
+                            <div class="skill-progress" style="width: 85%"></div>
+                        </div>
+                    </div>
+                    <div class="skill">
+                        <span>UI/UX设计</span>
+                        <div class="skill-bar">
+                            <div class="skill-progress" style="width: 75%"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- 作品集/项目展示 -->
+    <section id="portfolio" class="portfolio-section">
+        <h2>作品集</h2>
+        <div class="portfolio-grid">
+            <div class="portfolio-item">
+                <img src="https://via.placeholder.com/400x300/3498db/ffffff?text=作品1" alt="作品1">
+                <div class="portfolio-overlay">
+                    <h3>响应式网站</h3>
+                    <p>一个适应各种设备的响应式网站</p>
+                    <a href="#" class="btn">查看详情</a>
+                </div>
+            </div>
+            <div class="portfolio-item">
+                <img src="https://via.placeholder.com/400x300/2ecc71/ffffff?text=作品2" alt="作品2">
+                <div class="portfolio-overlay">
+                    <h3>电商平台</h3>
+                    <p>完整的电子商务解决方案</p>
+                    <a href="#" class="btn">查看详情</a>
+                </div>
+            </div>
+            <div class="portfolio-item">
+                <img src="https://via.placeholder.com/400x300/e74c3c/ffffff?text=作品3" alt="作品3">
+                <div class="portfolio-overlay">
+                    <h3>博客系统</h3>
+                    <p>个性化的内容管理系统</p>
+                    <a href="#" class="btn">查看详情</a>
+                </div>
+            </div>
+            <div class="portfolio-item">
+                <img src="https://via.placeholder.com/400x300/f39c12/ffffff?text=作品4" alt="作品4">
+                <div class="portfolio-overlay">
+                    <h3>社交媒体应用</h3>
+                    <p>连接人与人的互动平台</p>
+                    <a href="#" class="btn">查看详情</a>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- 联系方式区域 -->
+    <section id="contact" class="contact-section">
+        <h2>联系我</h2>
+        <div class="contact-container">
+            <div class="contact-form">
+                <form id="contactForm">
+                    <div class="form-group">
+                        <label for="name">您的姓名</label>
+                        <input type="text" id="name" name="name" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="email">电子邮箱</label>
+                        <input type="email" id="email" name="email" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="message">留言内容</label>
+                        <textarea id="message" name="message" rows="5" required></textarea>
+                    </div>
+                    <button type="submit" class="btn">发送消息</button>
+                </form>
+            </div>
+            <div class="contact-info">
+                <h3>联系信息</h3>
+                <p><i class="fas fa-envelope"></i> email@example.com</p>
+                <p><i class="fas fa-phone"></i> +86 123 4567 8901</p>
+                <p><i class="fas fa-map-marker-alt"></i> 北京市朝阳区</p>
+            </div>
+        </div>
+    </section>
+
+    <!-- 聊天机器人区域 -->
+    <section id="ai-chat" class="ai-chat-section">
+        <h2>与AI助手对话</h2>
+        <p class="ai-description">这是一个基于本地Ollama部署的DeepSeek大模型，支持上传文档作为知识库进行问答。您可以上传TXT、PDF等文件，然后针对文件内容提问。</p>
+        <div class="chat-container">
+            <div class="chat-messages" id="chatMessages">
+                <div class="message bot">
+                    <div class="message-content">
+                        <p>你好！我是基于DeepSeek的AI助手。有什么我可以帮助你的吗？您可以上传文档，我可以基于文档内容回答问题。</p>
+                    </div>
+                </div>
+            </div>
+            <div class="chat-input">
+                <input type="text" id="userMessage" placeholder="输入您的问题...">
+                <button id="sendMessage" class="btn">发送</button>
+            </div>
+        </div>
+    </section>
+
+    <!-- 页脚/社交媒体区域 -->
+    <footer class="footer">
+        <div class="social-media">
+            <a href="#" class="social-icon"><i class="fab fa-weibo"></i><span>微博</span></a>
+            <a href="#" class="social-icon"><i class="fab fa-weixin"></i><span>微信</span></a>
+            <a href="#" class="social-icon"><i class="fab fa-zhihu"></i><span>知乎</span></a>
+            <a href="#" class="social-icon"><i class="fab fa-github"></i><span>GitHub</span></a>
+            <a href="#" class="social-icon"><i class="fab fa-bilibili"></i><span>哔哩哔哩</span></a>
+        </div>
+        <div class="footer-bottom">
+            <p>© 2023 我的个人网站. 保留所有权利.</p>
+            <div class="theme-switch">
+                <label class="switch">
+                    <input type="checkbox" id="themeToggle">
+                    <span class="slider round"></span>
+                </label>
+                <span>切换主题</span>
+            </div>
+        </div>
+    </footer>
+
+    <script src="main.js"></script>
+    <script src="chat.js"></script>
+    <script src="background.js"></script>
+</body>
+</html> 
