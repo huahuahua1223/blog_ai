@@ -1,3 +1,8 @@
+// 获取API URL的函数
+function getApiUrl() {
+    return window.OLLAMA_CONFIG ? window.OLLAMA_CONFIG.API_URL : 'http://localhost:11434';
+}
+
 // 与Ollama DeepSeek模型交互的代码
 document.addEventListener('DOMContentLoaded', () => {
     const chatMessages = document.getElementById('chatMessages');
@@ -274,7 +279,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
                 
                 // 尝试直接请求（如果Ollama配置了CORS）
-                const response = await fetch('http://localhost:11434/api/generate', {
+                const response = await fetch(`${getApiUrl()}/api/generate`, {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json'
@@ -387,7 +392,7 @@ document.addEventListener('DOMContentLoaded', () => {
     async function checkOllamaService() {
         try {
             // 尝试使用fetch API，但处理可能的CORS错误
-            const response = await fetch('http://localhost:11434/api/tags', {
+            const response = await fetch(`${getApiUrl()}/api/tags`, {
                 method: 'GET'
             });
             console.log(response);
@@ -484,4 +489,136 @@ document.addEventListener('DOMContentLoaded', () => {
     
     // 将示例问题按钮添加到聊天容器之后
     chatContainer.parentNode.insertBefore(exampleButtonsContainer, chatContainer.nextSibling);
-}); 
+
+    // 添加API设置UI
+    addApiSettingsToPage();
+});
+
+// 添加API设置界面
+function createApiSettingsUI() {
+    const apiSettingsDiv = document.createElement('div');
+    apiSettingsDiv.className = 'api-settings';
+    apiSettingsDiv.style.marginTop = '15px';
+    apiSettingsDiv.style.padding = '10px 15px';
+    apiSettingsDiv.style.backgroundColor = 'var(--light-gray)';
+    apiSettingsDiv.style.borderRadius = '10px';
+    apiSettingsDiv.style.fontSize = '0.9rem';
+
+    const apiSettingsTitle = document.createElement('div');
+    apiSettingsTitle.textContent = 'API 连接设置';
+    apiSettingsTitle.style.fontWeight = 'bold';
+    apiSettingsTitle.style.marginBottom = '10px';
+    apiSettingsTitle.style.display = 'flex';
+    apiSettingsTitle.style.justifyContent = 'space-between';
+    apiSettingsTitle.style.alignItems = 'center';
+
+    const apiStatus = document.createElement('span');
+    apiStatus.className = 'api-status';
+    apiStatus.textContent = '检测中...';
+    apiStatus.style.fontSize = '0.8rem';
+    apiStatus.style.padding = '3px 8px';
+    apiStatus.style.borderRadius = '10px';
+    apiStatus.style.backgroundColor = '#f0f0f0';
+    apiSettingsTitle.appendChild(apiStatus);
+
+    const apiInputGroup = document.createElement('div');
+    apiInputGroup.style.display = 'flex';
+    apiInputGroup.style.gap = '5px';
+    apiInputGroup.style.marginTop = '10px';
+
+    const apiInput = document.createElement('input');
+    apiInput.type = 'text';
+    apiInput.value = getApiUrl();
+    apiInput.placeholder = 'API URL (如: https://xxxx.ngrok.io)';
+    apiInput.style.flex = '1';
+    apiInput.style.padding = '8px 10px';
+    apiInput.style.borderRadius = '5px';
+    apiInput.style.border = '1px solid #ddd';
+    apiInput.style.fontSize = '0.9rem';
+
+    const saveBtn = document.createElement('button');
+    saveBtn.className = 'btn';
+    saveBtn.textContent = '保存';
+    saveBtn.style.padding = '8px 15px';
+    saveBtn.style.fontSize = '0.9rem';
+
+    saveBtn.addEventListener('click', () => {
+        const newUrl = apiInput.value.trim();
+        if (newUrl && window.OLLAMA_CONFIG) {
+            window.OLLAMA_CONFIG.setApiUrl(newUrl);
+        } else {
+            alert('请输入有效的API URL');
+        }
+    });
+
+    const resetBtn = document.createElement('button');
+    resetBtn.className = 'btn';
+    resetBtn.textContent = '重置';
+    resetBtn.style.padding = '8px 15px';
+    resetBtn.style.fontSize = '0.9rem';
+    resetBtn.style.marginLeft = '5px';
+    resetBtn.style.backgroundColor = '#f44336';
+
+    resetBtn.addEventListener('click', () => {
+        localStorage.removeItem('ollama_api_url');
+        window.location.reload();
+    });
+
+    apiInputGroup.appendChild(apiInput);
+    apiInputGroup.appendChild(saveBtn);
+    apiInputGroup.appendChild(resetBtn);
+
+    const statusNote = document.createElement('div');
+    statusNote.style.marginTop = '10px';
+    statusNote.style.fontSize = '0.8rem';
+    statusNote.style.color = 'var(--thinking-color)';
+    statusNote.textContent = '提示: 使用Ngrok URL时，确保格式为 https://xxxx.ngrok.io (不要在最后加斜杠)';
+
+    apiSettingsDiv.appendChild(apiSettingsTitle);
+    apiSettingsDiv.appendChild(apiInputGroup);
+    apiSettingsDiv.appendChild(statusNote);
+
+    return apiSettingsDiv;
+}
+
+// 添加API设置UI到页面
+function addApiSettingsToPage() {
+    const chatContainer = document.querySelector('.chat-container');
+    if (chatContainer && chatContainer.parentNode) {
+        const apiSettings = createApiSettingsUI();
+        chatContainer.parentNode.insertBefore(apiSettings, chatContainer);
+        
+        // 检查API连接状态
+        updateApiStatus();
+    }
+}
+
+// 更新API状态指示器
+async function updateApiStatus() {
+    const apiStatus = document.querySelector('.api-status');
+    if (!apiStatus) return;
+    
+    try {
+        apiStatus.textContent = '连接中...';
+        apiStatus.style.backgroundColor = '#ffeb3b'; // 黄色
+        
+        const response = await fetch(`${getApiUrl()}/api/tags`, {
+            method: 'GET',
+            signal: AbortSignal.timeout(5000) // 5秒超时
+        });
+        
+        if (response.ok) {
+            apiStatus.textContent = '已连接';
+            apiStatus.style.backgroundColor = '#4caf50'; // 绿色
+            apiStatus.style.color = 'white';
+        } else {
+            apiStatus.textContent = '连接错误';
+            apiStatus.style.backgroundColor = '#ff9800'; // 橙色
+        }
+    } catch (error) {
+        apiStatus.textContent = '未连接';
+        apiStatus.style.backgroundColor = '#f44336'; // 红色
+        apiStatus.style.color = 'white';
+        console.error('API连接失败:', error);
+    }
+} 
