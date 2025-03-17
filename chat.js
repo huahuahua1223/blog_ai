@@ -1,9 +1,13 @@
-// 获取API URL的函数
-function getApiUrl() {
-    return window.OLLAMA_CONFIG ? window.OLLAMA_CONFIG.API_URL : 'http://localhost:11434';
+// 获取API配置的函数
+function getApiConfig() {
+    return window.API_CONFIG ? window.API_CONFIG.API_CONFIG : {
+        baseUrl: window.ENV?.API_BASE_URL,
+        apiKey: window.ENV?.API_KEY,
+        model: window.ENV?.API_MODEL
+    };
 }
 
-// 与Ollama DeepSeek模型交互的代码
+// 与OpenAI API (deepseek-reasoner模型)交互的代码
 document.addEventListener('DOMContentLoaded', () => {
     const chatMessages = document.getElementById('chatMessages');
     const userMessageInput = document.getElementById('userMessage');
@@ -252,39 +256,53 @@ document.addEventListener('DOMContentLoaded', () => {
         return messageDiv; // 返回消息元素，以便后续更新
     }
     
-    // 发送消息给Ollama API (使用流式响应实时显示思考过程)
-    async function sendToOllama(message) {
+    // 发送消息给OpenAI API
+    async function sendToOpenAI(message) {
         try {
             // 创建消息元素但显示正在思考
             const botMessage = addMessage('思考中...', false);
             
             try {
-                // 准备请求正文，如果有上下文则包含上下文
-                let requestBody = {
-                    model: 'deepseek-r1:8b',
-                    prompt: message,
-                    stream: true, // 启用流式响应
-                    options: {
-                        temperature: 0.7,
-                        // 可以添加其他模型参数
-                    }
-                };
+                const apiConfig = getApiConfig();
                 
-                // 如果有上下文，则添加到提示中，并添加system提示要求思考过程可见
+                // 准备消息数组
+                const messages = [];
+                
+                // 如果有上下文，则添加到系统消息中
                 if (currentContext) {
-                    requestBody.prompt = `我将为你提供一些背景知识，请基于这些知识回答我的问题。请在回答问题时，先进行思考分析，然后给出最终答案。请确保你的思考过程可见。\n\n背景知识：\n${currentContext}\n\n我的问题是：${message}`;
+                    messages.push({
+                        role: "system", 
+                        content: `我将为你提供一些背景知识，请基于这些知识回答我的问题。请在回答问题时，先进行思考分析，然后给出最终答案。请确保你的思考过程可见。\n\n背景知识：\n${currentContext}`
+                    });
                 } else {
-                    requestBody.system = "请在回答问题时展示你的思考过程，先分析问题，然后给出答案。请确保你的思考过程对用户可见。";
-                    requestBody.prompt = `${message}`;
+                    messages.push({
+                        role: "system", 
+                        content: "请在回答问题时展示你的思考过程，先分析问题，然后给出答案。请确保你的思考过程对用户可见。"
+                    });
                 }
                 
-                // 尝试直接请求（如果Ollama配置了CORS）
-                const response = await fetch(`${getApiUrl()}/api/generate`, {
+                // 添加用户消息
+                messages.push({
+                    role: "user",
+                    content: message
+                });
+                
+                // 准备请求数据
+                const requestData = {
+                    model: apiConfig.model,
+                    messages: messages,
+                    stream: true, // 使用流式响应
+                    temperature: 0.7
+                };
+                
+                // 发送请求到OpenAI API
+                const response = await fetch(`${apiConfig.baseUrl}/chat/completions`, {
                     method: 'POST',
                     headers: {
-                        'Content-Type': 'application/json'
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${apiConfig.apiKey}`
                     },
-                    body: JSON.stringify(requestBody)
+                    body: JSON.stringify(requestData)
                 });
                 
                 if (!response.ok) {
@@ -308,13 +326,19 @@ document.addEventListener('DOMContentLoaded', () => {
                     // 解码二进制数据
                     const chunk = decoder.decode(value, { stream: true });
                     
-                    // 解析JSON行
-                    const lines = chunk.split('\n').filter(line => line.trim());
+                    // 处理SSE格式数据（以data:开头的行）
+                    const lines = chunk.split('\n').filter(line => line.trim() && line.startsWith('data:'));
                     for (const line of lines) {
                         try {
-                            const data = JSON.parse(line);
-                            if (data.response) {
-                                responseText += data.response;
+                            const jsonStr = line.substring(5).trim(); // 移除'data:'前缀
+                            
+                            // 处理流式响应结束标志
+                            if (jsonStr === '[DONE]') continue;
+                            
+                            const data = JSON.parse(jsonStr);
+                            if (data.choices && data.choices[0].delta && data.choices[0].delta.content) {
+                                const content = data.choices[0].delta.content;
+                                responseText += content;
                                 messageParagraph.textContent = responseText;
                                 
                                 // 自动滚动到最新消息
@@ -331,36 +355,20 @@ document.addEventListener('DOMContentLoaded', () => {
                     messageParagraph.textContent = "抱歉，我没有生成任何回答。请重试。";
                 }
                 
-            } catch (fetchError) {
-                console.error('直接请求失败:', fetchError);
+            } catch (apiError) {
+                console.error('API请求失败:', apiError);
                 
-                // 提示用户CORS问题
-                botMessage.querySelector('p').textContent = '由于浏览器的安全限制（CORS策略），无法直接从网页访问本地Ollama API。\n\n解决方案：\n1. 使用浏览器扩展禁用CORS（如"CORS Unblock"或"Allow CORS"）\n2. 在Ollama启动时配置允许CORS\n3. 创建一个简单的代理服务器转发请求';
-                
-                // 添加CORS解决方案按钮
-                const corsHelpDiv = document.createElement('div');
-                corsHelpDiv.className = 'cors-help';
-                corsHelpDiv.style.textAlign = 'center';
-                corsHelpDiv.style.margin = '20px 0';
-                
-                const corsHelpButton = document.createElement('button');
-                corsHelpButton.className = 'btn';
-                corsHelpButton.textContent = '查看CORS解决方案';
-                corsHelpButton.addEventListener('click', () => {
-                    window.open('https://github.com/ollama/ollama/blob/main/docs/api.md#cross-origin-resource-sharing-cors', '_blank');
-                });
-                
-                corsHelpDiv.appendChild(corsHelpButton);
-                chatMessages.parentNode.insertBefore(corsHelpDiv, chatMessages.nextSibling);
+                // 显示错误消息
+                botMessage.querySelector('p').textContent = `API请求失败: ${apiError.message}。请检查API配置和网络连接。`;
             }
         } catch (error) {
-            console.error('与Ollama通信出错:', error);
+            console.error('与API通信出错:', error);
             
-            // 如果出错，显示错误消息并提供一个备用回复
+            // 如果出错，显示错误消息
             const lastMessage = chatMessages.lastChild;
             if (lastMessage && lastMessage.classList.contains('bot')) {
                 const messageParagraph = lastMessage.querySelector('p');
-                messageParagraph.textContent = '抱歉，我无法连接到本地的DeepSeek模型。请确保Ollama服务正在运行，并且DeepSeek模型已经下载。\n\n可以通过以下命令启动Ollama服务：\n命令行中输入: ollama serve\n\n如果还没有下载DeepSeek模型，可以使用命令：\n命令行中输入: ollama pull deepseek-r1:8b';
+                messageParagraph.textContent = '抱歉，无法连接到API。请检查网络连接和API配置。';
             }
         }
     }
@@ -376,8 +384,8 @@ document.addEventListener('DOMContentLoaded', () => {
             // 清空输入框
             userMessageInput.value = '';
             
-            // 发送到Ollama
-            sendToOllama(userMessage);
+            // 发送到OpenAI API
+            sendToOpenAI(userMessage);
         }
     });
     
@@ -388,73 +396,40 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
     
-    // 检测Ollama服务是否可用
-    async function checkOllamaService() {
+    // 检测API服务是否可用
+    async function checkAPIService() {
         try {
-            // 尝试使用fetch API，但处理可能的CORS错误
-            const response = await fetch(`${getApiUrl()}/api/tags`, {
-                method: 'GET'
+            const apiConfig = getApiConfig();
+            
+            // 尝试发送简单请求检查API可用性
+            const response = await fetch(`${apiConfig.baseUrl}/models`, {
+                method: 'GET',
+                headers: {
+                    'Authorization': `Bearer ${apiConfig.apiKey}`
+                }
             });
-            console.log(response);
             
             if (response.ok) {
-                const data = await response.json();
-                console.log('Ollama服务可用，已安装模型:', data.models);
+                console.log('API服务可用');
+                addMessage(`检测到API服务可用。您现在可以开始对话！您可以上传文档进行提问，我会在回答问题时展示我的思考过程。`, false);
                 
-                // 检查是否已安装DeepSeek模型
-                const hasDeepSeek = data.models.some(model => 
-                    model.name.toLowerCase().includes('deepseek')
-                );
-                
-                if (hasDeepSeek) {
-                    // 找到了DeepSeek模型
-                    const deepseekModel = data.models.find(model => 
-                        model.name.toLowerCase().includes('deepseek')
-                    );
-                    console.log('找到DeepSeek模型:', deepseekModel.name);
-                    
-                    // 添加欢迎信息，确认可以使用的模型
-                    addMessage(`检测到可用的DeepSeek模型: ${deepseekModel.name}。您现在可以开始对话！您可以看到已预加载的知识库，或上传新的文档进行提问。我会在回答问题时展示我的思考过程。`, false);
-                    
-                    // 预加载知识库
-                    preloadKnowledgeBase();
-                } else {
-                    addMessage('检测到Ollama服务正在运行，但未找到DeepSeek模型。请使用以下命令下载模型：\n命令行中输入: ollama pull deepseek-r1:8b', false);
-                }
-            }
-        } catch (error) {
-            console.error('Ollama服务检测失败:', error);
-            
-            // 特别处理CORS错误
-            if (error instanceof TypeError && error.message.includes('Failed to fetch')) {
-                addMessage('检测到Ollama服务可能正在运行，但由于浏览器的CORS限制无法访问。请使用以下解决方案之一：\n\n1. 使用浏览器插件禁用CORS（如"CORS Unblock"）\n2. 配置Ollama允许CORS请求\n3. 使用简单的代理服务器转发请求', false);
-                
-                // 尝试预加载知识库，即使Ollama无法访问
+                // 预加载知识库
                 preloadKnowledgeBase();
             } else {
-                addMessage('无法连接到Ollama服务。请确保您已安装Ollama并启动服务：\n1. 从 https://ollama.ai 下载并安装Ollama\n2. 命令行中输入: ollama serve\n3. 下载DeepSeek模型: ollama pull deepseek-r1:8b', false);
+                console.error('API服务返回错误:', response.status);
+                addMessage(`API连接测试失败: ${response.status} ${response.statusText}。请检查API配置。`, false);
             }
+        } catch (error) {
+            console.error('API服务检测失败:', error);
+            addMessage(`无法连接到API服务。请检查您的网络连接和API配置。错误信息: ${error.message}`, false);
             
-            // 增加一个启动Ollama的指导
-            const helpDiv = document.createElement('div');
-            helpDiv.className = 'ollama-help';
-            helpDiv.style.textAlign = 'center';
-            helpDiv.style.margin = '20px 0';
-            
-            const helpButton = document.createElement('button');
-            helpButton.className = 'btn';
-            helpButton.textContent = 'Ollama设置指南';
-            helpButton.addEventListener('click', () => {
-                window.open('https://github.com/ollama/ollama#get-started', '_blank');
-            });
-            
-            helpDiv.appendChild(helpButton);
-            chatMessages.parentNode.insertBefore(helpDiv, chatMessages.nextSibling);
+            // 尝试预加载知识库，即使API不可用
+            preloadKnowledgeBase();
         }
     }
     
     // 页面加载时检查服务可用性
-    checkOllamaService();
+    checkAPIService();
     
     // 添加示例问题按钮
     const exampleQuestions = [
@@ -505,7 +480,7 @@ function createApiSettingsUI() {
     apiSettingsDiv.style.fontSize = '0.9rem';
 
     const apiSettingsTitle = document.createElement('div');
-    apiSettingsTitle.textContent = 'API 连接设置';
+    apiSettingsTitle.textContent = 'API 设置';
     apiSettingsTitle.style.fontWeight = 'bold';
     apiSettingsTitle.style.marginBottom = '10px';
     apiSettingsTitle.style.display = 'flex';
@@ -521,61 +496,136 @@ function createApiSettingsUI() {
     apiStatus.style.backgroundColor = '#f0f0f0';
     apiSettingsTitle.appendChild(apiStatus);
 
-    const apiInputGroup = document.createElement('div');
-    apiInputGroup.style.display = 'flex';
-    apiInputGroup.style.gap = '5px';
-    apiInputGroup.style.marginTop = '10px';
-
-    const apiInput = document.createElement('input');
-    apiInput.type = 'text';
-    apiInput.value = getApiUrl();
-    apiInput.placeholder = 'API URL (如: https://xxxx.ngrok.io)';
-    apiInput.style.flex = '1';
-    apiInput.style.padding = '8px 10px';
-    apiInput.style.borderRadius = '5px';
-    apiInput.style.border = '1px solid #ddd';
-    apiInput.style.fontSize = '0.9rem';
-
-    const saveBtn = document.createElement('button');
-    saveBtn.className = 'btn';
-    saveBtn.textContent = '保存';
-    saveBtn.style.padding = '8px 15px';
-    saveBtn.style.fontSize = '0.9rem';
-
-    saveBtn.addEventListener('click', () => {
-        const newUrl = apiInput.value.trim();
-        if (newUrl && window.OLLAMA_CONFIG) {
-            window.OLLAMA_CONFIG.setApiUrl(newUrl);
+    // 设置表单
+    const apiForm = document.createElement('div');
+    apiForm.style.display = 'flex';
+    apiForm.style.flexDirection = 'column';
+    apiForm.style.gap = '10px';
+    
+    // Base URL输入
+    const baseUrlGroup = document.createElement('div');
+    const baseUrlLabel = document.createElement('label');
+    baseUrlLabel.textContent = 'API Base URL:';
+    baseUrlLabel.style.display = 'block';
+    baseUrlLabel.style.marginBottom = '5px';
+    baseUrlLabel.style.fontSize = '0.9rem';
+    
+    const baseUrlInput = document.createElement('input');
+    baseUrlInput.type = 'text';
+    baseUrlInput.className = 'base-url-input';
+    baseUrlInput.value = getApiConfig().baseUrl;
+    baseUrlInput.placeholder = 'API Base URL';
+    baseUrlInput.style.width = '100%';
+    baseUrlInput.style.padding = '8px 10px';
+    baseUrlInput.style.borderRadius = '5px';
+    baseUrlInput.style.border = '1px solid #ddd';
+    baseUrlInput.style.fontSize = '0.9rem';
+    
+    baseUrlGroup.appendChild(baseUrlLabel);
+    baseUrlGroup.appendChild(baseUrlInput);
+    
+    // API Key输入
+    const apiKeyGroup = document.createElement('div');
+    const apiKeyLabel = document.createElement('label');
+    apiKeyLabel.textContent = 'API Key:';
+    apiKeyLabel.style.display = 'block';
+    apiKeyLabel.style.marginBottom = '5px';
+    apiKeyLabel.style.fontSize = '0.9rem';
+    
+    const apiKeyInput = document.createElement('input');
+    apiKeyInput.type = 'password';
+    apiKeyInput.className = 'api-key-input';
+    apiKeyInput.value = getApiConfig().apiKey;
+    apiKeyInput.placeholder = 'API Key';
+    apiKeyInput.style.width = '100%';
+    apiKeyInput.style.padding = '8px 10px';
+    apiKeyInput.style.borderRadius = '5px';
+    apiKeyInput.style.border = '1px solid #ddd';
+    apiKeyInput.style.fontSize = '0.9rem';
+    
+    apiKeyGroup.appendChild(apiKeyLabel);
+    apiKeyGroup.appendChild(apiKeyInput);
+    
+    // 模型名称输入
+    const modelGroup = document.createElement('div');
+    const modelLabel = document.createElement('label');
+    modelLabel.textContent = '模型名称:';
+    modelLabel.style.display = 'block';
+    modelLabel.style.marginBottom = '5px';
+    modelLabel.style.fontSize = '0.9rem';
+    
+    const modelInput = document.createElement('input');
+    modelInput.type = 'text';
+    modelInput.className = 'model-input';
+    modelInput.value = getApiConfig().model;
+    modelInput.placeholder = '模型名称';
+    modelInput.style.width = '100%';
+    modelInput.style.padding = '8px 10px';
+    modelInput.style.borderRadius = '5px';
+    modelInput.style.border = '1px solid #ddd';
+    modelInput.style.fontSize = '0.9rem';
+    
+    modelGroup.appendChild(modelLabel);
+    modelGroup.appendChild(modelInput);
+    
+    // 按钮组
+    const buttonGroup = document.createElement('div');
+    buttonGroup.style.display = 'flex';
+    buttonGroup.style.gap = '10px';
+    buttonGroup.style.marginTop = '10px';
+    
+    const saveButton = document.createElement('button');
+    saveButton.className = 'btn';
+    saveButton.textContent = '保存设置';
+    saveButton.style.padding = '8px 15px';
+    saveButton.style.fontSize = '0.9rem';
+    saveButton.style.flex = '1';
+    
+    saveButton.addEventListener('click', () => {
+        const baseUrl = baseUrlInput.value.trim();
+        const apiKey = apiKeyInput.value.trim();
+        const model = modelInput.value.trim();
+        
+        if (baseUrl && apiKey && model && window.API_CONFIG) {
+            window.API_CONFIG.setApiConfig(baseUrl, apiKey, model);
         } else {
-            alert('请输入有效的API URL');
+            alert('请填写所有必填字段');
         }
     });
-
-    const resetBtn = document.createElement('button');
-    resetBtn.className = 'btn';
-    resetBtn.textContent = '重置';
-    resetBtn.style.padding = '8px 15px';
-    resetBtn.style.fontSize = '0.9rem';
-    resetBtn.style.marginLeft = '5px';
-    resetBtn.style.backgroundColor = '#f44336';
-
-    resetBtn.addEventListener('click', () => {
-        localStorage.removeItem('ollama_api_url');
-        window.location.reload();
+    
+    const resetButton = document.createElement('button');
+    resetButton.className = 'btn';
+    resetButton.textContent = '重置设置';
+    resetButton.style.padding = '8px 15px';
+    resetButton.style.fontSize = '0.9rem';
+    resetButton.style.flex = '1';
+    resetButton.style.backgroundColor = '#f44336';
+    
+    resetButton.addEventListener('click', () => {
+        if (confirm('确定要重置API设置吗？这将恢复默认设置。')) {
+            localStorage.removeItem('openai_base_url');
+            localStorage.removeItem('openai_api_key');
+            localStorage.removeItem('openai_model');
+            window.location.reload();
+        }
     });
-
-    apiInputGroup.appendChild(apiInput);
-    apiInputGroup.appendChild(saveBtn);
-    apiInputGroup.appendChild(resetBtn);
+    
+    buttonGroup.appendChild(saveButton);
+    buttonGroup.appendChild(resetButton);
+    
+    apiForm.appendChild(baseUrlGroup);
+    apiForm.appendChild(apiKeyGroup);
+    apiForm.appendChild(modelGroup);
+    apiForm.appendChild(buttonGroup);
 
     const statusNote = document.createElement('div');
     statusNote.style.marginTop = '10px';
     statusNote.style.fontSize = '0.8rem';
     statusNote.style.color = 'var(--thinking-color)';
-    statusNote.textContent = '提示: 使用Ngrok URL时，确保格式为 https://xxxx.ngrok.io (不要在最后加斜杠)';
+    statusNote.textContent = '提示: 配置正确的API参数可以确保您的聊天功能正常工作。';
 
     apiSettingsDiv.appendChild(apiSettingsTitle);
-    apiSettingsDiv.appendChild(apiInputGroup);
+    apiSettingsDiv.appendChild(apiForm);
     apiSettingsDiv.appendChild(statusNote);
 
     return apiSettingsDiv;
@@ -602,8 +652,12 @@ async function updateApiStatus() {
         apiStatus.textContent = '连接中...';
         apiStatus.style.backgroundColor = '#ffeb3b'; // 黄色
         
-        const response = await fetch(`${getApiUrl()}/api/tags`, {
+        const apiConfig = getApiConfig();
+        const response = await fetch(`${apiConfig.baseUrl}/models`, {
             method: 'GET',
+            headers: {
+                'Authorization': `Bearer ${apiConfig.apiKey}`
+            },
             signal: AbortSignal.timeout(5000) // 5秒超时
         });
         

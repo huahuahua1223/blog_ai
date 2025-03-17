@@ -1,5 +1,21 @@
-// 等待DOM加载完成
-document.addEventListener('DOMContentLoaded', () => {
+// 初始化应用程序
+async function initApp() {
+    try {
+        // 加载环境变量
+        await window.loadEnv();
+        console.log('环境变量加载完成');
+        
+        // 触发DOM加载后的初始化函数
+        initDomContent();
+    } catch (error) {
+        console.error('初始化应用程序出错:', error);
+        // 即使环境变量加载失败，仍然初始化应用
+        initDomContent();
+    }
+}
+
+// 等待DOM加载完成的主要初始化函数
+function initDomContent() {
     // 导航栏滚动效果
     const navbar = document.querySelector('.navbar');
     const navLinks = document.querySelector('.nav-links');
@@ -261,4 +277,7 @@ document.addEventListener('DOMContentLoaded', () => {
     observeElements.forEach(element => {
         observer.observe(element);
     });
-}); 
+}
+
+// 添加页面加载事件监听器
+document.addEventListener('DOMContentLoaded', initApp); 

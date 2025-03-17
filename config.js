@@ -1,37 +1,43 @@
-// Ollama API配置
+// OpenAI API配置
 const CONFIG = {
-    // 默认本地URL
-    LOCAL_API_URL: 'http://localhost:11434',
-    
-    // Ngrok URL (需要替换为您的Ngrok地址)
-    // NGROK_API_URL: 'https://your-ngrok-url.ngrok.io', // 替换为您的Ngrok URL
-    NGROK_API_URL: 'https://sweeping-redbird-striking.ngrok-free.app', // 替换为您的Ngrok URL
-
-    // 当前使用的API URL
-    get API_URL() {
-        // 检测是否是生产环境
-        const isProduction = window.location.hostname !== 'localhost' && 
-                            !window.location.hostname.includes('127.0.0.1');
-        
-        // 使用本地存储保存的URL或默认选择
-        const savedUrl = localStorage.getItem('ollama_api_url');
-        
-        if (savedUrl) {
-            return savedUrl;
-        } else if (isProduction) {
-            return this.NGROK_API_URL;
-        } else {
-            return this.LOCAL_API_URL;
-        }
+    // API基础URL - 从环境变量获取或使用默认值
+    get BASE_URL() {
+        return window.ENV?.API_BASE_URL || '';
     },
     
-    // 设置API URL
-    setApiUrl(url) {
-        localStorage.setItem('ollama_api_url', url);
-        // 刷新页面以应用新URL
+    // API密钥 - 从环境变量获取或使用默认值
+    get API_KEY() {
+        return window.ENV?.API_KEY || '';
+    },
+    
+    // 模型名称 - 从环境变量获取或使用默认值
+    get MODEL() {
+        return window.ENV?.API_MODEL || 'deepseek-reasoner';
+    },
+    
+    // 获取当前API配置
+    get API_CONFIG() {
+        // 使用本地存储保存的配置或默认配置
+        const savedBaseUrl = localStorage.getItem('openai_base_url');
+        const savedApiKey = localStorage.getItem('openai_api_key');
+        const savedModel = localStorage.getItem('openai_model');
+        
+        return {
+            baseUrl: savedBaseUrl || this.BASE_URL,
+            apiKey: savedApiKey || this.API_KEY,
+            model: savedModel || this.MODEL
+        };
+    },
+    
+    // 设置API配置
+    setApiConfig(baseUrl, apiKey, model) {
+        if (baseUrl) localStorage.setItem('openai_base_url', baseUrl);
+        if (apiKey) localStorage.setItem('openai_api_key', apiKey);
+        if (model) localStorage.setItem('openai_model', model);
+        // 刷新页面以应用新配置
         window.location.reload();
     }
 };
 
 // 导出配置
-window.OLLAMA_CONFIG = CONFIG; 
+window.API_CONFIG = CONFIG; 

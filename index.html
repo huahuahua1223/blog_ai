@@ -8,6 +8,8 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
     <!-- Three.js库 -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <!-- 环境变量加载器 -->
+    <script src="env-loader.js"></script>
     <!-- 配置文件 -->
     <script src="config.js"></script>
 </head>
@@ -192,12 +194,12 @@
     <!-- 聊天机器人区域 -->
     <section id="ai-chat" class="ai-chat-section">
         <h2>与AI助手对话</h2>
-        <p class="ai-description">这是一个基于本地Ollama部署的DeepSeek大模型，支持上传文档作为知识库进行问答。您可以上传TXT、PDF等文件，然后针对文件内容提问。</p>
+        <p class="ai-description">这是一个基于OpenAI API调用的deepseek大模型，支持上传文档作为知识库进行问答。您可以上传TXT、PDF等文件，然后针对文件内容提问。</p>
         <div class="chat-container">
             <div class="chat-messages" id="chatMessages">
                 <div class="message bot">
                     <div class="message-content">
-                        <p>你好！我是基于DeepSeek的AI助手。有什么我可以帮助你的吗？您可以上传文档，我可以基于文档内容回答问题。</p>
+                        <p>你好！我是基于deepseek的AI助手。有什么我可以帮助你的吗？您可以上传文档，我可以基于文档内容回答问题。</p>
                     </div>
                 </div>
             </div>
